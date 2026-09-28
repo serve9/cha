@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#000000">
+
+<title>X-Force Stream - Plataforma de Entretenimiento</title>
+
+<!-- Librería HLS.js para canales en vivo .m3u8 -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+<!-- Firebase App y Firestore SDKs -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA2Fxc-RHLbGgAnU6wvZseoidI5jluykVc",
+    authDomain: "charly-stream.firebaseapp.com",
+    projectId: "charly-stream",
+    storageBucket: "charly-stream.firebasestorage.app",
+    messagingSenderId: "500209886393",
+    appId: "1:500209886393:web:78322ba82a08ee130ee768"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  async function loadDataFromFirebase() {
+    try {
+      const channelsSnap = await getDocs(collection(db, "channels"));
+      window.channels = channelsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const moviesSnap = await getDocs(collection(db, "movies"));
+      window.movies = moviesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const seriesSnap = await getDocs(collection(db, "series"));
+      window.series = seriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      if (typeof renderAll === "function") {
+        renderAll();
+      }
+      console.log("¡Datos sincronizados con X-Force Stream exitosamente! 🚀");
+    } catch (error) {
+      console.error("Error al obtener datos de Firebase:", error);
+    }
+  }
+
+  loadDataFromFirebase();
+</script>
+
+<style>
+:root {
+    --bg-color: #050505;
+    --card-bg: #101010;
+    --neon-red: #ff1e38;
+    --neon-cyan: #00e5ff;
+    --neon-green: #00ff66;
+    --text-main: #ffffff;
+    --text-muted: #999999;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background: var(--bg-color);
+    color: var(--text-main);
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+button {
+    font-family: inherit;
+}
+
+/* HEADER ESTILO NEÓN */
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: 70px;
+    background: rgba(5,5,5,.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid #1a1a1a;
+    display: flex;
+    align-items: center;
+    padding: 0 25px;
+    gap: 25px;
+}
+
+.logo {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 10px rgba(0,229,255,0.4);
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+.nav {
+    display: flex;
+    gap: 5px;
+    overflow-x: auto;
+}
+
+.nav button {
+    background: transparent;
+    border: 0;
+    color: var(--text-muted);
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    border-radius: 6px;
+    transition: 0.2s;
+}
+
+.nav button:hover,
+.nav button.active {
+    color: var(--neon-cyan);
+    background: rgba(0,229,255,0.08);
+}
+
+.search {
+    margin-left: auto;
+}
+
+.search input {
+    width: 220px;
+    background: #121212;
+    border: 1px solid #252525;
+    border-radius: 20px;
+    color: white;
+    padding: 10px 16px;
+    outline: none;
+    transition: 0.2s;
+}
+
+.search input:focus {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 8px rgba(0,229,255,0.3);
+}
+
+/* HERO SECTION */
+.hero {
+    min-height: 380px;
+    padding: 60px 7%;
+    display: flex;
+    align-items: center;
+    background:
+        linear-gradient(90deg, #050505 20%, rgba(5,5,5,0.85), rgba(5,5,5,0.3)),
+        linear-gradient(0deg, #050505, transparent),
+        url("https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1600&q=80")
+        center/cover;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.hero-content {
+    max-width: 600px;
+}
+
+.hero h1 {
+    font-size: 42px;
+    margin-bottom: 15px;
+    font-weight: 900;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+}
+
+.hero h1 span {
+    color: var(--neon-cyan);
+    text-shadow: 0 0 15px rgba(0,229,255,0.5);
+}
+
+.hero p {
+    color: #ccc;
+    line-height: 1.6;
+    margin-bottom: 25px;
+    font-size: 16px;
+}
+
+.btn {
+    border: 0;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.2s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--neon-cyan), #0088cc);
+    color: #000;
+    box-shadow: 0 0 15px rgba(0,229,255,0.3);
+}
+
+.btn-primary:hover {
+    box-shadow: 0 0 25px rgba(0,229,255,0.6);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: #1c1c1c;
+    color: white;
+    margin-left: 10px;
+    border: 1px solid #333;
+}
+
+.btn-secondary:hover {
+    background: #252525;
+    border-color: var(--neon-red);
+}
+
+/* CONTENEDOR Y SECCIONES */
+.container {
+    width: 92%;
+    max-width: 1400px;
+    margin: auto;
+    padding: 35px 0 80px;
+}
+
+.section {
+    margin-bottom: 40px;
+}
+
+.section-title {
+    font-size: 22px;
+    margin-bottom: 20px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(170px,1fr));
+    gap: 20px;
+}
+
+/* TARJETAS ESTILO NEÓN */
+.card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    border: 1px solid #1a1a1a;
+}
+
+.card:hover {
+    transform: translateY(-6px);
+    border-color: var(--neon-cyan);
+    box-shadow: 0 5px 20px rgba(0,229,255,0.2);
+}
+
+.poster {
+    width: 100%;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+    display: block;
+}
+
+.card-info {
+    padding: 12px;
+}
+
+.card-title {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-meta {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.favorite {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}
+
+.favorite:hover {
+    background: var(--neon-red);
+}
+
+.favorite.active {
+    color: var(--neon-red);
+    text-shadow: 0 0 10px rgba(255,30,56,0.6);
+}
+
+.live-badge {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    background: var(--neon-red);
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 900;
+    box-shadow: 0 0 10px rgba(255,30,56,0.6);
+    letter-spacing: 0.5px;
+}
+
+.empty {
+    color: var(--text-muted);
+    padding: 40px 0;
+    text-align: center;
+    font-size: 15px;
+}
+
+/* REPRODUCTOR MODAL */
+.player-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+    background: rgba(0,0,0,0.95);
+    backdrop-filter: blur(8px);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.player-modal.show {
+    display: flex;
+}
+
+.player-box {
+    width: 100%;
+    max-width: 950px;
+    background: #111;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid #333;
+    box-shadow: 0 0 30px rgba(0,229,255,0.15);
+}
+
+.player-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #0d0d0d;
+    border-bottom: 1px solid #222;
+}
+
+.close {
+    background: #1f1f1f;
+    border: 0;
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.2s;
+}
+
+.close:hover {
+    background: var(--neon-red);
+}
+
+video {
+    width: 100%;
+    max-height: 70vh;
+    background: #000;
+    display: block;
+}
+
+.player-info {
+    padding: 20px;
+}
+
+.player-info p {
+    color: var(--text-muted);
+    margin-top: 8px;
+    font-size: 14px;
+}
+
+/* PERFIL */
+.profile {
+    max-width: 500px;
+    margin: auto;
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 30px;
+    border: 1px solid #222;
+}
+
+.profile h2 {
+    margin-bottom: 20px;
+    color: var(--neon-cyan);
+}
+
+.profile input {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 15px;
+    background: #181818;
+    border: 1px solid #333;
+    color: white;
+    border-radius: 8px;
+    outline: none;
+}
+
+.profile input:focus {
+    border-color: var(--neon-cyan);
+}
+
+/* FOOTER */
+footer {
+    border-top: 1px solid #1a1a1a;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 30px;
+    font-size: 13px;
+    background: #030303;
+}
+
+/* RESPONSIVE */
+@media(max-width:700px) {
+    .header {
+        height: auto;
+        min-height: 65px;
+        flex-wrap: wrap;
+        padding: 12px;
+        gap: 12px;
+    }
+    .logo {
+        font-size: 20px;
+    }
+    .nav {
+        width: 100%;
+        order: 3;
+    }
+    .search input {
+        width: 140px;
+    }
+    .hero {
+        min-height: 320px;
+        padding: 40px 5%;
+    }
+    .hero h1 {
+        font-size: 30px;
+    }
+    .grid {
+        grid-template-columns: repeat(2,1fr);
+        gap: 12px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header class="header">
+    <div class="logo">X-FORCE STREAM</div>
+    <nav class="nav">
+        <button class="active" onclick="showSection('inicio',this)">Inicio</button>
+        <button onclick="showSection('tv',this)">📺 TV</button>
+        <button onclick="showSection('peliculas',this)">🎬 Películas</button>
+        <button onclick="showSection('series',this)">📚 Series</button>
+        <button onclick="showSection('favoritos',this)">❤️ Favoritos</button>
+        <button onclick="showSection('perfil',this)">👤 Perfil</button>
+    </nav>
+    <div class="search">
+        <input type="search" id="searchInput" placeholder="Buscar contenido..." oninput="searchContent()">
+    </div>
+</header>
+
+<main>
+<!-- INICIO -->
+<section id="inicio">
+    <div class="hero">
+        <div class="hero-content">
+            <h1>Todo tu entretenimiento en <span>X-Force Stream</span></h1>
+            <p>Disfruta televisión en vivo, películas exclusivas y tus series favoritas con la máxima velocidad y calidad.</p>
+            <button class="btn btn-primary" onclick="showSection('tv')">📺 Ver TV en vivo</button>
+            <button class="btn btn-secondary" onclick="showSection('peliculas')">🎬 Películas</button>
+        </div>
+    </div>
+    <div class="container">
+        <div class="section">
+            <h2 class="section-title">🔴 Canales en vivo</h2>
+            <div class="grid" id="homeChannels"></div>
+        </div>
+        <div class="section">
+            <h2 class="section-title">🎬 Películas destacadas</h2>
+            <div class="grid" id="homeMovies"></div>
+        </div>
+    </div>
+</section>
+
+<!-- TV -->
+<section id="tv" style="display:none">
+    <div class="container">
+        <h2 class="section-title">📺 Televisión en vivo</h2>
+        <div class="grid" id="channels"></div>
+    </div>
+</section>
+
+<!-- PELÍCULAS -->
+<section id="peliculas" style="display:none">
+    <div class="container">
+        <h2 class="section-title">🎬 Películas</h2>
+        <div class="grid" id="movies"></div>
+    </div>
+</section>
+
+<!-- SERIES -->
+<section id="series" style="display:none">
+    <div class="container">
+        <h2 class="section-title">📚 Series</h2>
+        <div class="grid" id="seriesGrid"></div>
+    </div>
+</section>
+
+<!-- FAVORITOS -->
+<section id="favoritos" style="display:none">
+    <div class="container">
+        <h2 class="section-title">❤️ Mis favoritos</h2>
+        <div class="grid" id="favoritesGrid"></div>
+    </div>
+</section>
+
+<!-- BUSQUEDA -->
+<section id="buscar" style="display:none">
+    <div class="container">
+        <h2 class="section-title">🔎 Resultados de búsqueda</h2>
+        <div class="grid" id="searchResults"></div>
+    </div>
+</section>
+
+<!-- PERFIL -->
+<section id="perfil" style="display:none">
+    <div class="container">
+        <div class="profile">
+            <h2>👤 Mi perfil</h2>
+            <input type="text" id="profileName" placeholder="Tu nombre">
+            <input type="email" id="profileEmail" placeholder="Tu correo">
+            <button class="btn btn-primary" style="width:100%" onclick="saveProfile()">Guardar perfil</button>
+            <p id="profileMessage" style="margin-top:15px;color:var(--neon-cyan);text-align:center;"></p>
+        </div>
+    </div>
+</section>
+</main>
+
+<footer>
+    X-Force Stream © 2026 — Plataforma de entretenimiento de alta potencia
+</footer>
+
+<!-- REPRODUCTOR -->
+<div class="player-modal" id="playerModal">
+    <div class="player-box">
+        <div class="player-header">
+            <strong id="playerTitle">Reproduciendo</strong>
+            <button class="close" onclick="closePlayer()">✕</button>
+        </div>
+        <video id="videoPlayer" controls playsinline></video>
+        <div class="player-info">
+            <h3 id="playerName"></h3>
+            <p id="playerDescription"></p>
+        </div>
+    </div>
+</div>
+
+<script>
+window.channels = [];
+window.movies = [];
+window.series = [];
+
+let hls = null;
+
+let favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+
+function isFavorite(id){
+    return favorites.includes(id);
+}
+
+function toggleFavorite(id,event){
+    event.stopPropagation();
+    if(isFavorite(id)){
+        favorites = favorites.filter(item => item !== id);
+    }else{
+        favorites.push(id);
+    }
+    localStorage.setItem("favorites", JSON.stringify(favorites));
+    renderAll();
+}
+
+function createCard(item,type){
+    const favoriteClass = isFavorite(item.id) ? "active" : "";
+    const heart = isFavorite(item.id) ? "♥" : "♡";
+    const live = type === "channel" ? '<span class="live-badge">● EN VIVO</span>' : "";
+
+    return `
+        <div class="card" onclick="openPlayer('${item.id}','${type}')">
+            ${live}
+            <button class="favorite ${favoriteClass}" onclick="toggleFavorite('${item.id}',event)">
+                ${heart}
+            </button>
+            <img class="poster" src="${item.image}" alt="${item.title}" loading="lazy">
+            <div class="card-info">
+                <div class="card-title">${item.title}</div>
+                <div class="card-meta">
+                    ${item.category}
+                    ${item.year ? " • " + item.year : ""}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderChannels(){
+    const html = channels.map(item => createCard(item,"channel")).join("");
+    document.getElementById("channels").innerHTML = html || '<div class="empty">No hay canales disponibles.</div>';
+    document.getElementById("homeChannels").innerHTML = channels.slice(0,4).map(item => createCard(item,"channel")).join("") || '<div class="empty">Sin canales.</div>';
+}
+
+function renderMovies(){
+    const html = movies.map(item => createCard(item,"movie")).join("");
+    document.getElementById("movies").innerHTML = html || '<div class="empty">No hay películas disponibles.</div>';
+    document.getElementById("homeMovies").innerHTML = movies.slice(0,4).map(item => createCard(item,"movie")).join("") || '<div class="empty">Sin películas.</div>';
+}
+
+function renderSeries(){
+    document.getElementById("seriesGrid").innerHTML = series.map(item => createCard(item,"series")).join("") || '<div class="empty">No hay series disponibles.</div>';
+}
+
+function renderFavorites(){
+    const all = [...channels, ...movies, ...series];
+    const selected = all.filter(item => favorites.includes(item.id));
+    const container = document.getElementById("favoritesGrid");
+
+    if(selected.length === 0){
+        container.innerHTML = '<div class="empty">Todavía no tienes favoritos guardados.</div>';
+        return;
+    }
+
+    container.innerHTML = selected.map(item => {
+        const type = channels.some(c => c.id === item.id) ? "channel" :
+                     series.some(s => s.id === item.id) ? "series" : "movie";
+        return createCard(item, type);
+    }).join("");
+}
+
+function renderAll(){
+    renderChannels();
+    renderMovies();
+    renderSeries();
+    renderFavorites();
+}
+
+function showSection(section,button){
+    document.querySelectorAll("main > section").forEach(sec => sec.style.display = "none");
+    const selected = document.getElementById(section);
+    if(selected){
+        selected.style.display = "block";
+    }
+    document.querySelectorAll(".nav button").forEach(btn => btn.classList.remove("active"));
+    if(button){
+        button.classList.add("active");
+    }
+    window.scrollTo({ top:0, behavior:"smooth" });
+}
+
+function searchContent(){
+    const query = document.getElementById("searchInput").value.toLowerCase().trim();
+    if(query === ""){
+        document.getElementById("buscar").style.display="none";
+        return;
+    }
+    document.querySelectorAll("main > section").forEach(sec => sec.style.display="none");
+    document.getElementById("buscar").style.display="block";
+
+    const all = [
+        ...channels.map(x => ({...x, type:"channel"})),
+        ...movies.map(x => ({...x, type:"movie"})),
+        ...series.map(x => ({...x, type:"series"}))
+    ];
+
+    const results = all.filter(item =>
+        item.title.toLowerCase().includes(query) ||
+        item.category.toLowerCase().includes(query)
+    );
+
+    const container = document.getElementById("searchResults");
+    if(results.length === 0){
+        container.innerHTML = '<div class="empty">No encontramos resultados para tu búsqueda.</div>';
+        return;
+    }
+    container.innerHTML = results.map(item => createCard(item,item.type)).join("");
+}
+
+function findContent(id,type){
+    if(type === "channel") return channels.find(x => x.id === id);
+    if(type === "movie") return movies.find(x => x.id === id);
+    if(type === "series") return series.find(x => x.id === id);
+}
+
+function openPlayer(id,type){
+    const item = findContent(id,type);
+    if(!item) return;
+
+    const modal = document.getElementById("playerModal");
+    const video = document.getElementById("videoPlayer");
+
+    document.getElementById("playerTitle").textContent = item.title;
+    document.getElementById("playerName").textContent = item.title;
+    document.getElementById("playerDescription").textContent = item.description || item.category;
+
+    modal.classList.add("show");
+
+    if (hls) {
+        hls.destroy();
+        hls = null;
+    }
+
+    if (item.video && item.video.includes('.m3u8')) {
+        if (Hls.isSupported()) {
+            hls = new Hls();
+            hls.loadSource(item.video);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                video.play().catch(() => {});
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = item.video;
+            video.play().catch(() => {});
+        }
+    } else {
+        video.src = item.video;
+        video.play().catch(() => {});
+    }
+}
+
+function closePlayer(){
+    const modal = document.getElementById("playerModal");
+    const video = document.getElementById("videoPlayer");
+
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+
+    if (hls) {
+        hls.destroy();
+        hls = null;
+    }
+
+    modal.classList.remove("show");
+}
+
+document.getElementById("playerModal").addEventListener("click",function(e){
+    if(e.target === this){
+        closePlayer();
+    }
+});
+
+function loadProfile(){
+    const profile = JSON.parse(localStorage.getItem("profile") || "{}");
+    document.getElementById("profileName").value = profile.name || "";
+    document.getElementById("profileEmail").value = profile.email || "";
+}
+
+function saveProfile(){
+    const profile = {
+        name: document.getElementById("profileName").value,
+        email: document.getElementById("profileEmail").value
+    };
+    localStorage.setItem("profile", JSON.stringify(profile));
+    document.getElementById("profileMessage").textContent = "✓ ¡Perfil guardado correctamente!";
+}
+
+loadProfile();
+</script>
+
+</body>
+</html>
