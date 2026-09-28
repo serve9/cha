@@ -1,0 +1,21 @@
+{
+  "name": "X-Force Stream",
+  "short_name": "X-Force",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#00e5ff",
+  "description": "Plataforma oficial de streaming X-Force Stream",
+  "icons": [
+    {
+      "src": "/192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
