@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<link rel="manifest" href="manifest.json">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#000000">
 
 <title>X-Force Stream - Plataforma de Entretenimiento</title>
+
+<!-- Enlace al Manifiesto PWA para generar el APK -->
+<link rel="manifest" href="manifest.json">
 
 <!-- Librería HLS.js para canales en vivo .m3u8 -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -78,7 +80,6 @@ button {
     font-family: inherit;
 }
 
-/* HEADER ESTILO NEÓN */
 .header {
     position: sticky;
     top: 0;
@@ -147,7 +148,6 @@ button {
     box-shadow: 0 0 8px rgba(0,229,255,0.3);
 }
 
-/* HERO SECTION */
 .hero {
     min-height: 380px;
     padding: 60px 7%;
@@ -216,7 +216,6 @@ button {
     border-color: var(--neon-red);
 }
 
-/* CONTENEDOR Y SECCIONES */
 .container {
     width: 92%;
     max-width: 1400px;
@@ -243,7 +242,6 @@ button {
     gap: 20px;
 }
 
-/* TARJETAS ESTILO NEÓN */
 .card {
     background: var(--card-bg);
     border-radius: 12px;
@@ -333,7 +331,6 @@ button {
     font-size: 15px;
 }
 
-/* REPRODUCTOR MODAL */
 .player-modal {
     display: none;
     position: fixed;
@@ -402,7 +399,6 @@ video {
     font-size: 14px;
 }
 
-/* PERFIL */
 .profile {
     max-width: 500px;
     margin: auto;
@@ -432,7 +428,6 @@ video {
     border-color: var(--neon-cyan);
 }
 
-/* FOOTER */
 footer {
     border-top: 1px solid #1a1a1a;
     color: var(--text-muted);
@@ -442,7 +437,6 @@ footer {
     background: #030303;
 }
 
-/* RESPONSIVE */
 @media(max-width:700px) {
     .header {
         height: auto;
@@ -494,7 +488,6 @@ footer {
 </header>
 
 <main>
-<!-- INICIO -->
 <section id="inicio">
     <div class="hero">
         <div class="hero-content">
@@ -516,7 +509,6 @@ footer {
     </div>
 </section>
 
-<!-- TV -->
 <section id="tv" style="display:none">
     <div class="container">
         <h2 class="section-title">📺 Televisión en vivo</h2>
@@ -524,7 +516,6 @@ footer {
     </div>
 </section>
 
-<!-- PELÍCULAS -->
 <section id="peliculas" style="display:none">
     <div class="container">
         <h2 class="section-title">🎬 Películas</h2>
@@ -532,7 +523,6 @@ footer {
     </div>
 </section>
 
-<!-- SERIES -->
 <section id="series" style="display:none">
     <div class="container">
         <h2 class="section-title">📚 Series</h2>
@@ -540,7 +530,6 @@ footer {
     </div>
 </section>
 
-<!-- FAVORITOS -->
 <section id="favoritos" style="display:none">
     <div class="container">
         <h2 class="section-title">❤️ Mis favoritos</h2>
@@ -548,7 +537,6 @@ footer {
     </div>
 </section>
 
-<!-- BUSQUEDA -->
 <section id="buscar" style="display:none">
     <div class="container">
         <h2 class="section-title">🔎 Resultados de búsqueda</h2>
@@ -556,7 +544,6 @@ footer {
     </div>
 </section>
 
-<!-- PERFIL -->
 <section id="perfil" style="display:none">
     <div class="container">
         <div class="profile">
@@ -574,7 +561,6 @@ footer {
     X-Force Stream © 2026 — Plataforma de entretenimiento de alta potencia
 </footer>
 
-<!-- REPRODUCTOR -->
 <div class="player-modal" id="playerModal">
     <div class="player-box">
         <div class="player-header">
@@ -595,7 +581,6 @@ window.movies = [];
 window.series = [];
 
 let hls = null;
-
 let favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
 
 function isFavorite(id){
