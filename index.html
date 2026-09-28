@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#000000">
+
+<title>X-Force Stream - IPTV Player</title>
+
+<!-- Librería HLS.js para canales .m3u8 -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+<!-- Firebase App y Firestore SDKs -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA2Fxc-RHLbGgAnU6wvZseoidI5jluykVc",
+    authDomain: "charly-stream.firebaseapp.com",
+    projectId: "charly-stream",
+    storageBucket: "charly-stream.firebasestorage.app",
+    messagingSenderId: "500209886393",
+    appId: "1:500209886393:web:78322ba82a08ee130ee768"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  async function loadDataFromFirebase() {
+    try {
+      const channelsSnap = await getDocs(collection(db, "channels"));
+      const firebaseChannels = channelsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      const localM3U = JSON.parse(localStorage.getItem("m3u_channels") || "[]");
+      window.channels = [...firebaseChannels, ...localM3U];
+
+      if (window.channels.length === 0) {
+        window.channels = [
+          {
+            id: "bolivision_live",
+            title: "UNITEL HD SC (OP2)",
+            category: "BOLIVIA",
+            image: "https://images.unsplash.com/photo-1593784991095-a205069470b6?auto=format&fit=crop&w=500&q=80",
+            video: "https://d135ohnuotzzyo.cloudfront.net/_token/v1.1790600357.UlAQCrS6s7Qat1Sdh6pT1kdbvx7nuSk_bZnRPQOfkg4/index.m3u8",
+            description: "Señal en directo."
+          }
+        ];
+      }
+
+      const moviesSnap = await getDocs(collection(db, "movies"));
+      window.movies = moviesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const seriesSnap = await getDocs(collection(db, "series"));
+      window.series = seriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      if (typeof renderAll === "function") {
+        renderAll();
+      }
+    } catch (error) {
+      console.error("Error al obtener datos:", error);
+      window.channels = JSON.parse(localStorage.getItem("m3u_channels") || "[]");
+      renderAll();
+    }
+  }
+
+  loadDataFromFirebase();
+</script>
+
+<style>
+:root {
+    --bg-dark: #020813;
+    --neon-cyan: #00e5ff;
+    --neon-blue: #0088cc;
+    --text-main: #ffffff;
+    --text-muted: #8ab4f8;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+}
+
+body, html {
+    width: 100vw;
+    height: 100vh;
+    background: var(--bg-dark);
+    color: var(--text-main);
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    height: 100vh;
+}
+
+/* Barra Superior Horizontal */
+.top-bar {
+    height: 60px;
+    background: rgba(2, 6, 15, 0.95);
+    border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+    display: flex;
+    align-items: center;
+    padding: 0 25px;
+    gap: 20px;
+    flex-shrink: 0;
+}
+
+.brand-box {
+    font-weight: 900;
+    font-size: 18px;
+    color: var(--neon-cyan);
+    white-space: nowrap;
+}
+
+.clock-date {
+    color: var(--text-muted);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.top-search {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(0, 229, 255, 0.3);
+    border-radius: 20px;
+    padding: 5px 15px;
+    width: 250px;
+}
+
+.top-search input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: white;
+    font-size: 13px;
+    width: 100%;
+}
+
+.top-icons {
+    display: flex;
+    gap: 15px;
+    font-size: 16px;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+/* Vistas */
+.main-view {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+.section-pane {
+    position: absolute;
+    inset: 0;
+    display: none;
+    padding: 15px 25px;
+    overflow-y: auto;
+}
+
+.section-pane.active {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Cuadrícula de Inicio Estilo TV Box */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1.6fr 1.2fr;
+    grid-template-rows: repeat(2, 1fr);
+    gap: 12px;
+    width: 100%;
+    height: 100%;
+    max-height: 78vh;
+}
+
+.dash-card {
+    border-radius: 8px;
+    padding: 15px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    transition: 0.2s;
+}
+
+.dash-card.live {
+    grid-row: span 2;
+    background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80') center/cover;
+    justify-content: space-between;
+}
+
+.dash-card.cine { background: linear-gradient(135deg, #ff8c00, #ff3300); }
+.dash-card.series { background: linear-gradient(135deg, #ffb300, #e65100); }
+.dash-card.epg { background: linear-gradient(135deg, #9d00ff, #5100aa); }
+.dash-card.favorito { background: linear-gradient(135deg, #00b0ff, #0044cc); }
+.dash-card.catchup { background: linear-gradient(135deg, #00c853, #006400); }
+
+.dash-title {
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.dash-sub {
+    font-size: 11px;
+    color: #f1f1f1;
+}
+
+/* Diseño IPTV Lateral Corregido para evitar líneas */
+.iptv-layout {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    gap: 15px;
+}
+
+.sidebar-categories {
+    width: 260px;
+    background: rgba(4, 10, 20, 0.95);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.cat-item {
+    padding: 12px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.cat-item:hover, .cat-item.active {
+    background: var(--neon-blue);
+    color: white;
+}
+
+.cat-count {
+    background: rgba(0,0,0,0.4);
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 10px;
+}
+
+.content-grid-area {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+    align-content: start;
+}
+
+/* Tarjetas de canales corregidas para que no se deformen en líneas */
+.media-card {
+    background: #0f1c2e;
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    flex-direction: column;
+    height: 160px;
+}
+
+.media-poster {
+    width: 100%;
+    height: 105px;
+    object-fit: cover;
+    background: #000;
+    flex-shrink: 0;
+}
+
+.media-card.movie .media-poster {
+    height: 115px;
+}
+
+.media-info {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+}
+
+.media-name {
+    font-size: 11px;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.media-cat {
+    font-size: 9px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Reproductor Modal */
+.player-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: black;
+    z-index: 2000;
+    flex-direction: column;
+}
+
+.player-modal.show { display: flex; }
+
+.player-top-bar {
+    height: 45px;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+}
+
+.back-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+video {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    background: black;
+    object-fit: contain;
+}
+
+.empty-msg {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--text-muted);
+    padding: 30px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app-container">
+    <div class="top-bar">
+        <div class="brand-box"><span>📺 X-FORCE TV</span></div>
+        <div class="clock-date" id="liveClock">02:20 PM • septiembre 28, 2026</div>
+        <div class="top-search"><input type="text" id="globalSearch" placeholder="Búsqueda maestra..." oninput="filterContent()"></div>
+        <div class="top-icons">
+            <span onclick="switchTab('tv')" title="TV">📺</span>
+            <span onclick="switchTab('peliculas')" title="Películas">🎬</span>
+            <span onclick="switchTab('series')" title="Series">📚</span>
+            <span onclick="switchTab('favoritos')" title="Favoritos">❤️</span>
+        </div>
+    </div>
+
+    <div class="main-view">
+        <div id="tab-inicio" class="section-pane active">
+            <div class="dashboard-grid">
+                <div class="dash-card live" onclick="switchTab('tv')">
+                    <div class="dash-title">TV EN DIRECTO</div>
+                    <div class="dash-sub">En línea</div>
+                </div>
+                <div class="dash-card cine" onclick="switchTab('peliculas')">
+                    <div class="dash-title">CINE</div>
+                    <div class="dash-sub">Estrenos</div>
+                </div>
+                <div class="dash-card epg" onclick="switchTab('tv')">
+                    <div class="dash-title">EPG</div>
+                    <div class="dash-sub">Guía</div>
+                </div>
+                <div class="dash-card series" onclick="switchTab('series')">
+                    <div class="dash-title">SERIES</div>
+                    <div class="dash-sub">Temporadas</div>
+                </div>
+                <div class="dash-card favorito" onclick="switchTab('favoritos')">
+                    <div class="dash-title">FAVORITO ❤️</div>
+                    <div class="dash-sub">Guardados</div>
+                </div>
+                <div class="dash-card catchup" onclick="switchTab('tv')">
+                    <div class="dash-title">CATCH UP</div>
+                    <div class="dash-sub">Diferido</div>
+                </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:8px; color:var(--text-muted); font-size:11px;">
+                <span>EXPIRACIÓN: octubre 18, 2026</span>
+                <span>Conectado: x-force-stream</span>
+            </div>
+        </div>
+
+        <div id="tab-tv" class="section-pane">
+            <div class="iptv-layout">
+                <div class="sidebar-categories" id="tvCategories"></div>
+                <div class="content-grid-area" id="tvGrid"></div>
+            </div>
+        </div>
+
+        <div id="tab-peliculas" class="section-pane">
+            <div class="iptv-layout">
+                <div class="sidebar-categories" id="movieCategories"></div>
+                <div class="content-grid-area" id="moviesGrid"></div>
+            </div>
+        </div>
+
+        <div id="tab-series" class="section-pane">
+            <div class="iptv-layout">
+                <div class="sidebar-categories" id="seriesCategories"></div>
+                <div class="content-grid-area" id="seriesGrid"></div>
+            </div>
+        </div>
+
+        <div id="tab-favoritos" class="section-pane">
+            <div class="content-grid-area" id="favoritesGrid"></div>
+        </div>
+    </div>
+</div>
+
+<div class="player-modal" id="playerModal">
+    <div class="player-top-bar">
+        <button class="back-btn" onclick="closePlayer()">← <span id="playingTitle">Reproduciendo</span></button>
+    </div>
+    <video id="videoPlayer" controls autoplay playsinline></video>
+</div>
+
+<script>
+window.channels = window.channels || [];
+window.movies = window.movies || [];
+window.series = window.series || [];
+
+let hls = null;
+let favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+
+function switchTab(tabId) {
+    document.querySelectorAll(".section-pane").forEach(el => el.classList.remove("active"));
+    document.getElementById("tab-" + tabId).classList.add("active");
+    renderAll();
+}
+
+function renderAll() {
+    renderChannelsCategory('TODOS');
+    renderMoviesCategory('TODOS');
+    renderSeriesCategory('TODOS');
+    renderFavorites();
+}
+
+function renderChannelsCategory(selectedCat) {
+    const cats = ['TODOS', ...new Set(channels.map(c => c.category || 'General'))];
+    document.getElementById("tvCategories").innerHTML = cats.map(cat => {
+        const count = cat === 'TODOS' ? channels.length : channels.filter(c => (c.category || 'General') === cat).length;
+        return `<div class="cat-item ${cat === selectedCat ? 'active' : ''}" onclick="renderChannelsCategory('${cat}')"><span>${cat}</span><span class="cat-count">${count}</span></div>`;
+    }).join("");
+
+    const filtered = selectedCat === 'TODOS' ? channels : channels.filter(c => (c.category || 'General') === selectedCat);
+    document.getElementById("tvGrid").innerHTML = filtered.length ? filtered.map(item => `
+        <div class="media-card" onclick="openPlayer('${item.id}', 'channel')">
+            <img class="media-poster" src="${item.image}" loading="lazy">
+            <div class="media-info">
+                <div class="media-name">${item.title}</div>
+                <div class="media-cat">${item.category || 'En vivo'}</div>
+            </div>
+        </div>
+    `).join("") : '<div class="empty-msg">No hay canales.</div>';
+}
+
+function renderMoviesCategory(selectedCat) {
+    const cats = ['TODOS', ...new Set(movies.map(m => m.category || 'Cine'))];
+    document.getElementById("movieCategories").innerHTML = cats.map(cat => {
+        const count = cat === 'TODOS' ? movies.length : movies.filter(m => (m.category || 'Cine') === cat).length;
+        return `<div class="cat-item ${cat === selectedCat ? 'active' : ''}" onclick="renderMoviesCategory('${cat}')"><span>${cat}</span><span class="cat-count">${count}</span></div>`;
+    }).join("");
+
+    const filtered = selectedCat === 'TODOS' ? movies : movies.filter(m => (m.category || 'Cine') === selectedCat);
+    document.getElementById("moviesGrid").innerHTML = filtered.length ? filtered.map(item => `
+        <div class="media-card movie" onclick="openPlayer('${item.id}', 'movie')">
+            <img class="media-poster" src="${item.image}" loading="lazy">
+            <div class="media-info">
+                <div class="media-name">${item.title}</div>
+                <div class="media-cat">${item.year || '2026'}</div>
+            </div>
+        </div>
+    `).join("") : '<div class="empty-msg">No hay películas.</div>';
+}
+
+function renderSeriesCategory(selectedCat) {
+    const cats = ['TODOS', ...new Set(series.map(s => s.category || 'Series'))];
+    document.getElementById("seriesCategories").innerHTML = cats.map(cat => {
+        const count = cat === 'TODOS' ? series.length : series.filter(s => (s.category || 'Series') === cat).length;
+        return `<div class="cat-item ${cat === selectedCat ? 'active' : ''}" onclick="renderSeriesCategory('${cat}')"><span>${cat}</span><span class="cat-count">${count}</span></div>`;
+    }).join("");
+
+    const filtered = selectedCat === 'TODOS' ? series : series.filter(s => (s.category || 'Series') === selectedCat);
+    document.getElementById("seriesGrid").innerHTML = filtered.length ? filtered.map(item => `
+        <div class="media-card movie" onclick="openPlayer('${item.id}', 'series')">
+            <img class="media-poster" src="${item.image}" loading="lazy">
+            <div class="media-info">
+                <div class="media-name">${item.title}</div>
+                <div class="media-cat">Serie</div>
+            </div>
+        </div>
+    `).join("") : '<div class="empty-msg">No hay series.</div>';
+}
+
+function renderFavorites() {
+    const all = [...channels, ...movies, ...series];
+    const selected = all.filter(item => favorites.includes(item.id));
+    document.getElementById("favoritesGrid").innerHTML = selected.length ? selected.map(item => `
+        <div class="media-card" onclick="openPlayer('${item.id}', 'channel')">
+            <img class="media-poster" src="${item.image}" loading="lazy">
+            <div class="media-info"><div class="media-name">${item.title}</div></div>
+        </div>
+    `).join("") : '<div class="empty-msg">Sin favoritos.</div>';
+}
+
+function filterContent() {
+    const q = document.getElementById("globalSearch").value.toLowerCase().trim();
+    if(!q) return;
+    switchTab('tv');
+    const filtered = channels.filter(c => c.title.toLowerCase().includes(q));
+    document.getElementById("tvGrid").innerHTML = filtered.length ? filtered.map(item => `
+        <div class="media-card" onclick="openPlayer('${item.id}', 'channel')">
+            <img class="media-poster" src="${item.image}" loading="lazy">
+            <div class="media-info"><div class="media-name">${item.title}</div></div>
+        </div>
+    `).join("") : '<div class="empty-msg">Sin resultados.</div>';
+}
+
+function openPlayer(id, type) {
+    const all = [...channels, ...movies, ...series];
+    const item = all.find(x => x.id === id);
+    if(!item || !item.video) return;
+
+    document.getElementById("playingTitle").textContent = item.title;
+    document.getElementById("playerModal").classList.add("show");
+
+    const video = document.getElementById("videoPlayer");
+    if(hls) { hls.destroy(); hls = null; }
+
+    if(item.video.includes('.m3u8')) {
+        if(Hls.isSupported()) {
+            hls = new Hls();
+            hls.loadSource(item.video);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+        } else if(video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = item.video;
+            video.play();
+        }
+    } else {
+        video.src = item.video;
+        video.play();
+    }
+}
+
+function closePlayer() {
+    const video = document.getElementById("videoPlayer");
+    video.pause();
+    video.removeAttribute("src");
+    if(hls) { hls.destroy(); hls = null; }
+    document.getElementById("playerModal").classList.remove("show");
+}
+
+setInterval(() => {
+    const now = new Date();
+    document.getElementById("liveClock").textContent = `${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • ${now.toLocaleDateString('es-ES', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+}, 1000);
+</script>
+
+</body>
+</html>
